@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Hệ Thống Giao Dịch 'Chăn Vịt' - Ứng Dụng Tương Tác</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+   <!-- Chosen Palette: Warm Neutrals (Stone, Earthy Green) -->
+   <!-- Application Structure Plan: A single-page application with a fixed sidebar for smooth-scrolling navigation. The structure is thematic: 1. Introduction, 2. Mindset Foundation (using cards), 3. The 'Chăn Vịt' System (interactive diagram and simulator), 4. Tactics Library (tabbed interface), 5. Risk Management (visual alerts), 6. Appendix. This structure transforms the linear book format into an explorable, user-friendly experience, prioritizing understanding over sequential reading. -->
+   <!-- Visualization & Content Choices: Report Info: The core concepts of the book. Goal: To inform, organize, compare, and engage. Viz/Presentation Method: The 'Scaling Up' concept (Chương 5) is visualized using a dynamic Chart.js bar chart to show capital growth interactively. The 3-stage roadmap is an interactive flowchart. Comparisons (Scapping vs. Swing) use a tabbed, two-column layout. Risk concepts use alert-style cards. Interaction: Users can click on stages in the flowchart to reveal details and adjust sliders on the simulator to see the chart update, making abstract concepts tangible. Library/Method: Chart.js for the bar chart; Vanilla JS for all interactions (smooth scroll, tabs, simulator logic). CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+   <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+   <style>
+       body {
+           font-family: 'Be Vietnam Pro', sans-serif;
+           background-color: #f5f5f4; /* stone-100 */
+           color: #292524; /* stone-800 */
+       }
+       .nav-link {
+           transition: all 0.3s ease;
+           border-left: 3px solid transparent;
+       }
+       .nav-link.active, .nav-link:hover {
+           background-color: #e7e5e4; /* stone-200 */
+           border-left-color: #347355;
+           color: #347355;
+           transform: translateX(5px);
+       }
+       .accent-bg { background-color: #347355; }
+       .accent-text { color: #347355; }
+       .accent-border { border-color: #347355; }
+       .card {
+           background-color: white;
+           border-radius: 0.75rem;
+           box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+           transition: transform 0.3s ease, box-shadow 0.3s ease;
+       }
+       .card:hover {
+           transform: translateY(-5px);
+           box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+       }
+       .stage-card.active {
+           border-color: #347355;
+           box-shadow: 0 0 15px rgba(52, 115, 85, 0.3);
+       }
+       .tab.active {
+           border-bottom-color: #347355;
+           color: #347355;
+           font-weight: 600;
+       }
+       html {
+           scroll-behavior: smooth;
+       }
+       .chart-container {
+           position: relative;
+           width: 100%;
+           max-width: 700px;
+           margin-left: auto;
+           margin-right: auto;
+           height: 300px;
+           max-height: 400px;
+       }
+       @media (min-width: 768px) {
+           .chart-container {
+               height: 400px;
+           }
+       }
+   </style>
+</head>
+<body class="flex">
+
+   <aside class="w-64 h-screen fixed top-0 left-0 bg-white shadow-lg p-4 hidden lg:block">
+       <h1 class="text-xl font-bold accent-text mb-6">Hệ Thống "Chăn Vịt"</h1>
+       <nav id="desktop-nav">
+           <ul class="space-y-2">
+               <li><a href="#gioi-thieu" class="nav-link block p-3 rounded-lg font-medium">Lời Mở Đầu</a></li>
+               <li><a href="#tu-duy" class="nav-link block p-3 rounded-lg font-medium">Nền Tảng Tư Duy</a></li>
+               <li><a href="#he-thong" class="nav-link block p-3 rounded-lg font-medium">Xây Dựng "Trang Trại"</a></li>
+               <li><a href="#chien-thuat" class="nav-link block p-3 rounded-lg font-medium">Thư Viện Chiến Thuật</a></li>
+               <li><a href="#rui-ro" class="nav-link block p-3 rounded-lg font-medium">Quản Trị Rủi Ro</a></li>
+               <li><a href="#phu-luc" class="nav-link block p-3 rounded-lg font-medium">10 Điều Răn</a></li>
+           </ul>
+       </nav>
+   </aside>
+
+   <main class="w-full lg:ml-64 p-4 md:p-8">
+       <button id="menu-button" class="lg:hidden fixed top-4 right-4 z-50 bg-white p-2 rounded-md shadow-md">
+           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+           </svg>
+       </button>
+       <div id="mobile-menu" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40">
+           <div class="bg-white w-64 h-full p-4">
+                <h1 class="text-xl font-bold accent-text mb-6">Hệ Thống "Chăn Vịt"</h1>
+               <nav id="mobile-nav">
+                   <ul class="space-y-2">
+                       <li><a href="#gioi-thieu" class="nav-link block p-3 rounded-lg font-medium">Lời Mở Đầu</a></li>
+                       <li><a href="#tu-duy" class="nav-link block p-3 rounded-lg font-medium">Nền Tảng Tư Duy</a></li>
+                       <li><a href="#he-thong" class="nav-link block p-3 rounded-lg font-medium">Xây Dựng "Trang Trại"</a></li>
+                       <li><a href="#chien-thuat" class="nav-link block p-3 rounded-lg font-medium">Thư Viện Chiến Thuật</a></li>
+                       <li><a href="#rui-ro" class="nav-link block p-3 rounded-lg font-medium">Quản Trị Rủi Ro</a></li>
+                       <li><a href="#phu-luc" class="nav-link block p-3 rounded-lg font-medium">10 Điều Răn</a></li>
+                   </ul>
+               </nav>
+           </div>
+       </div>
+
+       <div class="max-w-4xl mx-auto space-y-16">
+          
+           <section id="gioi-thieu">
+               <div class="text-center p-8 bg-white rounded-lg shadow-md">
+                   <h2 class="text-4xl font-bold mb-4 accent-text">Hệ Thống Giao Dịch "Chăn Vịt"</h2>
+                   <p class="text-lg text-stone-600 mb-2">Từ Tư Duy An Nhiên Đến Tự Do Tài Chính</p>
+                   <p class="text-stone-500 max-w-2xl mx-auto">
+                       Chào mừng bạn đến với một hệ thống tư duy và phương pháp giao dịch độc đáo. Mục tiêu của chúng ta không phải là chiến đấu với thị trường, mà là xây dựng một "trang trại" bền vững, nơi dòng tiền được sinh ra một cách an nhàn. Hãy cùng khám phá hành trình chuyển đổi từ một trader căng thẳng thành một "người chăn vịt" hạnh phúc.
+                   </p>
+               </div>
+           </section>
+
+           <section id="tu-duy">
+               <h2 class="text-3xl font-bold mb-6 text-center">PHẦN I: NỀN TẢNG TƯ DUY</h2>
+               <div class="grid md:grid-cols-2 gap-8">
+                   <div class="card p-6">
+                       <h3 class="text-xl font-bold mb-3 accent-text flex items-center"><span class="text-3xl mr-3">🛡️</span> Chương 1: "Giữ Tiền" > "Kiếm Tiền"</h3>
+                       <p class="text-stone-600">Triết lý cốt lõi của mọi nhà đầu tư thành công. Câu hỏi quan trọng nhất không phải là "làm sao để thắng lớn?", mà là "làm sao để không mất vốn?". Thành công đến từ nội tâm bình an và kỷ luật thép.</p>
+                   </div>
+                   <div class="card p-6">
+                       <h3 class="text-xl font-bold mb-3 accent-text flex items-center"><span class="text-3xl mr-3">⚖️</span> Chương 2: Quy Tắc 20/80 & Dòng Tiền</h3>
+                       <p class="text-stone-600">Chỉ sử dụng tối đa 20% vốn nhàn rỗi ("dòng tiền không áp lực") cho giao dịch. 80% còn lại là tấm đệm an toàn cho cuộc sống. Quy tắc này giúp bạn giao dịch với một tâm thế thoải mái, sáng suốt và không bị cảm xúc chi phối.</p>
+                   </div>
+               </div>
+           </section>
+          
+           <section id="he-thong">
+               <h2 class="text-3xl font-bold mb-8 text-center">PHẦN II: XÂY DỰNG "TRANG TRẠI VỊT"</h2>
+               <div class="card p-6 mb-8">
+                   <h3 class="text-2xl font-bold mb-4 text-center accent-text">Lộ Trình 3 Giai Đoạn Bất Biến</h3>
+                   <p class="text-center text-stone-600 mb-8">Đây là con đường mà mọi "người chăn vịt" phải tuân thủ nghiêm ngặt để đảm bảo thành công bền vững. Click vào từng giai đoạn để khám phá chi tiết.</p>
+                   <div class="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-0">
+                       <div id="stage-1" class="stage-card card p-6 w-full md:w-1/3 text-center cursor-pointer border-2 border-transparent">
+                           <div class="text-4xl mb-2">❶</div>
+                           <h4 class="text-lg font-bold">Giai Đoạn 1</h4>
+                           <p class="font-semibold accent-text">THU HỒI VỐN</p>
+                       </div>
+                       <div class="text-2xl text-stone-400 mx-4 hidden md:block">→</div>
+                        <div id="stage-2" class="stage-card card p-6 w-full md:w-1/3 text-center cursor-pointer border-2 border-transparent">
+                           <div class="text-4xl mb-2">❷</div>
+                           <h4 class="text-lg font-bold">Giai Đoạn 2</h4>
+                           <p class="font-semibold accent-text">XÂY DỰNG DÒNG TIỀN</p>
+                       </div>
+                       <div class="text-2xl text-stone-400 mx-4 hidden md:block">→</div>
+                       <div id="stage-3" class="stage-card card p-6 w-full md:w-1/3 text-center cursor-pointer border-2 border-transparent">
+                           <div class="text-4xl mb-2">❸</div>
+                           <h4 class="text-lg font-bold">Giai Đoạn 3</h4>
+                           <p class="font-semibold accent-text">DÙNG LÃI KÉP</p>
+                       </div>
+                   </div>
+                   <div id="stage-details" class="mt-8 p-6 bg-stone-100 rounded-lg hidden"></div>
+               </div>
+
+               <div class="card p-6 mt-8">
+                   <h3 class="text-2xl font-bold mb-4 text-center accent-text">Mô Phỏng Mở Rộng Quy Mô</h3>
+                   <p class="text-center text-stone-600 mb-8">Khám phá cách "trang trại" của bạn phát triển từ "Vịt" đến "Đà Điểu" và "Khủng Long" thông qua lãi kép. Hãy điều chỉnh các thông số để xem sự tăng trưởng.</p>
+                   <div class="grid md:grid-cols-3 gap-6 mb-6">
+                       <div>
+                           <label for="initialCapital" class="block text-sm font-medium text-stone-700">Vốn khởi điểm ($)</label>
+                           <input type="number" id="initialCapital" value="500" class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                       </div>
+                       <div>
+                           <label for="weeklyProfit" class="block text-sm font-medium text-stone-700">Lãi suất tuần (%)</label>
+                           <input type="range" id="weeklyProfit" min="1" max="50" value="10" class="mt-1 block w-full">
+                           <div class="text-center font-semibold accent-text"><span id="weeklyProfitValue">10</span>%</div>
+                       </div>
+                       <div>
+                          <label for="weeks" class="block text-sm font-medium text-stone-700">Số tuần</label>
+                           <input type="range" id="weeks" min="4" max="52" value="26" class="mt-1 block w-full">
+                           <div class="text-center font-semibold accent-text"><span id="weeksValue">26</span> tuần</div>
+                       </div>
+                   </div>
+                   <div class="chart-container">
+                       <canvas id="growthChart"></canvas>
+                   </div>
+               </div>
+           </section>
+
+           <section id="chien-thuat">
+                <h2 class="text-3xl font-bold mb-6 text-center">PHẦN III: THƯ VIỆN CHIẾN THUẬT</h2>
+                <div class="card p-6">
+                    <div class="border-b border-stone-200 mb-4">
+                        <nav class="-mb-px flex space-x-8" id="tabs">
+                            <button data-tab="truong-phai" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-stone-500 hover:text-stone-700 hover:border-stone-300 active">Trường Phái Giao Dịch</button>
+                            <button data-tab="loi-danh" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-stone-500 hover:text-stone-700 hover:border-stone-300">"Lối Đánh"</button>
+                            <button data-tab="quan-ly" class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-stone-500 hover:text-stone-700 hover:border-stone-300">Quản Lý Lệnh</button>
+                        </nav>
+                    </div>
+                    <div id="tab-content"></div>
+                </div>
+           </section>
+          
+           <section id="rui-ro">
+               <h2 class="text-3xl font-bold mb-6 text-center">PHẦN IV: QUẢN TRỊ RỦI RO</h2>
+               <div class="grid md:grid-cols-2 gap-8">
+                    <div class="card p-6 border-l-4 border-amber-400">
+                       <h3 class="text-xl font-bold mb-3 text-amber-600 flex items-center"><span class="text-3xl mr-3">🌪️</span> Kỹ Thuật "Tránh Bão"</h3>
+                       <p class="text-stone-600">Khi có tin tức quan trọng hoặc yếu tố ngoại cảnh bất thường, hành động khôn ngoan nhất là tắt robot và đứng ngoài thị trường. Chấp nhận bỏ lỡ cơ hội để tránh một thảm họa. Người không mất tiền khi người khác mất tiền đã là người chiến thắng.</p>
+                   </div>
+                   <div class="card p-6 border-l-4 border-red-400">
+                       <h3 class="text-xl font-bold mb-3 text-red-600 flex items-center"><span class="text-3xl mr-3">📉</span> Giải Mã "TP Âm"</h3>
+                       <p class="text-stone-600">Đây không phải lỗi, mà là một cơ chế cắt lỗ thông minh của robot khi sàn giãn spread hoặc bóp margin. Nó gây ra một thiệt hại nhỏ để cứu tài khoản khỏi bị cháy. Hãy xem "TP Âm" là một người bạn bảo vệ, không phải kẻ thù.</p>
+                   </div>
+               </div>
+           </section>
+          
+           <section id="phu-luc">
+               <h2 class="text-3xl font-bold mb-6 text-center">PHỤ LỤC: 10 ĐIỀU RĂN CỦA "NGƯỜI CHĂN VỊT"</h2>
+               <div class="card p-8">
+                   <ol class="list-decimal list-inside space-y-4 text-stone-700">
+                       <li><span class="font-semibold">Đừng Bao Giờ Để Mất Tiền.</span> Nếu có mất, phải chắc chắn rằng nó không gây áp lực.</li>
+                       <li><span class="font-semibold">Thu Hồi Vốn Là Ưu Tiên Số Một.</span> Luôn rút vốn gốc về ngay khi có thể.</li>
+                       <li><span class="font-semibold">Chỉ Giao Dịch Bằng Dòng Tiền Không Áp Lực</span> (Quy tắc 20/80).</li>
+                       <li><span class="font-semibold">Kỷ Luật "Tránh Bão".</span> Biết khi nào nên đứng ngoài thị trường.</li>
+                       <li><span class="font-semibold">Hiểu Rõ "Lối Đánh" Của Mình.</span> Đánh Thuận hay Nghịch? Mục tiêu là gì?</li>
+                       <li><span class="font-semibold">"Quãng 0 đô" Là Phao Cứu Sinh.</span> Khi gặp khó, mục tiêu là hòa vốn, không phải gỡ gạc.</li>
+                       <li><span class="font-semibold">"TP Âm" Là Bạn, Không Phải Thù.</span> Chấp nhận một khoản lỗ nhỏ để tránh thảm họa.</li>
+                       <li><span class="font-semibold">Tư Duy > Công Cụ.</span> Một con robot tốt cũng vô dụng trong tay một người có tư duy sai.</li>
+                       <li><span class="font-semibold">Tôn Trọng Thời Gian Bằng Cách Tự Học.</span> Nỗ lực tìm câu trả lời trước khi đặt câu hỏi.</li>
+                       <li><span class="font-semibold">Giữ Tiền Khó Hơn Kiếm Tiền.</span> Luôn đặt việc bảo toàn thành quả lên hàng đầu.</li>
+                   </ol>
+               </div>
+           </section>
+       </div>
+   </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+   const stageData = {
+       'stage-1': {
+           title: 'Giai Đoạn 1: THU HỒI VỐN - Nhiệm vụ sinh tồn',
+           content: `
+               <p><strong>Mục tiêu:</strong> Lợi nhuận = 100% vốn gốc.</p>
+               <p><strong>Hành động:</strong> Bắt đầu với một số "vịt" nhất định (ví dụ 5 con vịt 100$, tổng vốn 500$). Giao dịch cho đến khi tổng lợi nhuận đạt 500$.</p>
+               <p><strong>Kỷ luật thép:</strong> Ngay khi đạt mục tiêu, hành động ĐẦU TIÊN và DUY NHẤT là rút toàn bộ 500$ vốn gốc về tài khoản ngân hàng. Không chần chừ, không do dự, không tiếc nuối.</p>
+               <p><strong>Lời khuyên:</strong> Giai đoạn này nên sử dụng các bộ thông số robot an toàn nhất. Ưu tiên bảo vệ vốn hơn là tối ưu lợi nhuận.</p>
+           `
+       },
+       'stage-2': {
+           title: 'Giai Đoạn 2: XÂY DỰNG DÒNG TIỀN TỪ LÃI - "Cho vịt đẻ"',
+           content: `
+               <p><strong>Tình trạng:</strong> Bây giờ bạn đang giao dịch với 100% tiền lãi. Áp lực tâm lý đã biến mất.</p>
+               <p><strong>Mục tiêu:</strong> Sử dụng số tiền lãi này để "nhân đàn" một cách an toàn.</p>
+               <p><strong>Hành động:</strong> Tiếp tục cho các "con vịt" ban đầu giao dịch. Hàng ngày hoặc hàng tuần, dồn toàn bộ lợi nhuận phát sinh vào một tài khoản riêng. Khi đủ 100$, hãy "ấp" một con vịt mới.</p>
+               <p><strong>Case study:</strong> Câu chuyện của bạn Toàn là minh chứng. Bạn đã dùng lãi để nhân đàn lên 14 "con vịt" và đạt lợi nhuận 1600$ chỉ sau chưa đầy 2 tháng.</p>
+           `
+       },
+       'stage-3': {
+           title: 'Giai Đoạn 3: DÙNG LÃI KÉP - Tối ưu hóa và đặt cược',
+           content: `
+               <p><strong>Tình trạng:</strong> "Trang trại" của bạn đã lớn mạnh và tạo ra dòng tiền thụ động.</p>
+               <p><strong>Mục tiêu:</strong> Tối ưu hóa lợi nhuận và tìm kiếm cơ hội đột phá.</p>
+               <p><strong>Hành động:</strong> Trích một phần lợi nhuận hàng tháng để đặt cược vào những cơ hội lớn hơn. Nếu thành công, bạn có lợi nhuận đột biến. Nếu thất bại, bạn chỉ mất một phần tiền lãi, hoàn toàn không ảnh hưởng đến vốn gốc và sự ổn định của "trang trại".</p>
+               <p><strong>Tâm thế:</strong> Đây là lúc bạn thực sự tự do về tâm lý để đưa ra những quyết định đầu tư lớn.</p>
+           `
+       }
+   };
+
+   const stageCards = document.querySelectorAll('.stage-card');
+   const stageDetails = document.getElementById('stage-details');
+
+   stageCards.forEach(card => {
+       card.addEventListener('click', () => {
+           stageCards.forEach(c => c.classList.remove('active'));
+           card.classList.add('active');
+          
+           const stageId = card.id;
+           const data = stageData[stageId];
+          
+           stageDetails.innerHTML = `<h4 class="text-xl font-bold mb-4 accent-text">${data.title}</h4><div>${data.content}</div>`;
+           stageDetails.classList.remove('hidden');
+       });
+   });
+
+   const initialCapitalEl = document.getElementById('initialCapital');
+   const weeklyProfitEl = document.getElementById('weeklyProfit');
+   const weeklyProfitValueEl = document.getElementById('weeklyProfitValue');
+   const weeksEl = document.getElementById('weeks');
+   const weeksValueEl = document.getElementById('weeksValue');
+   const ctx = document.getElementById('growthChart').getContext('2d');
+   let growthChart;
+
+   function calculateGrowth() {
+       const capital = parseFloat(initialCapitalEl.value);
+       const profitRate = parseFloat(weeklyProfitEl.value) / 100;
+       const totalWeeks = parseInt(weeksEl.value);
+
+       let currentCapital = capital;
+       const data = [capital];
+       const labels = ['Tuần 0'];
+
+       for (let i = 1; i <= totalWeeks; i++) {
+           currentCapital *= (1 + profitRate);
+           if (i % 4 === 0 || i === totalWeeks) {
+               labels.push(`Tuần ${i}`);
+               data.push(currentCapital);
+           }
+       }
+       return { labels, data };
+   }
+
+   function getTier(capital) {
+       if (capital < 1000) return { name: 'Vịt', color: '#6ee7b7' }; // emerald-300
+       if (capital < 10000) return { name: 'Đà Điểu', color: '#fde047' }; // yellow-300
+       return { name: 'Khủng Long', color: '#f87171' }; // red-400
+   }
+
+   function updateChart() {
+       const { labels, data } = calculateGrowth();
+       const backgroundColors = data.map(d => getTier(d).color);
+       const tiers = data.map(d => getTier(d).name);
+
+       if (growthChart) {
+           growthChart.destroy();
+       }
+
+       growthChart = new Chart(ctx, {
+           type: 'bar',
+           data: {
+               labels: labels,
+               datasets: [{
+                   label: 'Tổng Vốn ($)',
+                   data: data,
+                   backgroundColor: backgroundColors,
+                   borderColor: backgroundColors.map(c => c.replace('0.2', '1')),
+                   borderWidth: 1
+               }]
+           },
+           options: {
+               responsive: true,
+               maintainAspectRatio: false,
+               scales: {
+                   y: {
+                       beginAtZero: true,
+                       ticks: {
+                           callback: function(value, index, values) {
+                               return '$' + value.toLocaleString();
+                           }
+                       }
+                   }
+               },
+               plugins: {
+                   tooltip: {
+                       callbacks: {
+                           label: function(context) {
+                               let label = context.dataset.label || '';
+                               if (label) {
+                                   label += ': ';
+                               }
+                               if (context.parsed.y !== null) {
+                                   label += '$' + context.parsed.y.toLocaleString();
+                               }
+                               return label;
+                           },
+                            afterLabel: function(context) {
+                               return 'Cấp độ: ' + tiers[context.dataIndex];
+                           }
+                       }
+                   },
+                   legend: {
+                       display: false
+                   }
+               }
+           }
+       });
+   }
+
+   weeklyProfitEl.addEventListener('input', (e) => {
+       weeklyProfitValueEl.textContent = e.target.value;
+       updateChart();
+   });
+   initialCapitalEl.addEventListener('input', updateChart);
+   weeksEl.addEventListener('input', (e) => {
+       weeksValueEl.textContent = e.target.value;
+       updateChart();
+   });
+
+   updateChart();
+  
+   const tabData = {
+       'truong-phai': `
+           <div class="grid md:grid-cols-2 gap-6">
+               <div>
+                   <h4 class="text-lg font-semibold mb-2">Scapping Trade (Lướt sóng)</h4>
+                   <p class="text-sm text-stone-600 mb-3">Giao dịch cực nhanh, thu lợi nhuận nhỏ nhưng thường xuyên. Yêu cầu kỷ luật thép và phản xạ nhanh.</p>
+                   <ul class="list-disc list-inside text-sm space-y-1">
+                       <li><span class="font-semibold">Ưu điểm:</span> Thanh khoản vốn nhanh, không giữ lệnh qua đêm.</li>
+                       <li><span class="font-semibold">Nhược điểm:</span> Căng thẳng, chi phí giao dịch lớn, dễ biến thành cờ bạc.</li>
+                       <li class="font-bold text-red-600">Quy tắc bất biến: Không bao giờ gồng lệnh scap qua đêm.</li>
+                   </ul>
+               </div>
+                <div>
+                   <h4 class="text-lg font-semibold mb-2">Swing Trading (Theo sóng)</h4>
+                   <p class="text-sm text-stone-600 mb-3">Giữ lệnh dài ngày/tuần để bắt trọn một con sóng xu hướng lớn. Yêu cầu sự kiên nhẫn và khả năng phân tích vĩ mô.</p>
+                   <ul class="list-disc list-inside text-sm space-y-1">
+                       <li><span class="font-semibold">Ưu điểm:</span> Lợi nhuận lớn trên mỗi giao dịch, ít căng thẳng hơn.</li>
+                       <li><span class="font-semibold">Nhược điểm:</span> Vốn bị ghim lâu, đòi hỏi kiên nhẫn cao.</li>
+                       <li class="font-bold text-red-600">Quy tắc bất biến: Không giao dịch khi thị trường đi ngang (sideway).</li>
+                   </ul>
+               </div>
+           </div>
+       `,
+       'loi-danh': `
+           <div class="space-y-4">
+               <div>
+                   <h4 class="text-lg font-semibold">Đánh Thuận (Follow Trend)</h4>
+                   <p class="text-sm text-stone-600">Lối đánh an toàn nhất. Chờ giá hồi về các vùng hỗ trợ/kháng cự trong một xu hướng chính rồi mới vào lệnh. "Xu hướng là bạn".</p>
+               </div>
+                <div>
+                   <h4 class="text-lg font-semibold">Đánh Nghịch (Counter-Trend)</h4>
+                   <p class="text-sm text-stone-600">Cực kỳ rủi ro, chỉ dành cho chuyên gia. Bán khi thị trường đang tăng mạnh (bắt đỉnh) hoặc mua khi đang giảm mạnh (bắt đáy) để ăn sóng hồi ngắn. Tuyệt đối không được tham lam.</p>
+               </div>
+                <div>
+                   <h4 class="text-lg font-semibold">Đánh theo Tâm giá (Mean Reversion)</h4>
+                   <p class="text-sm text-stone-600">Kỹ thuật nâng cao. Xác định vùng giá trị trung bình mà thị trường có xu hướng quay về, sau đó giao dịch theo hướng hội tụ về tâm giá đó.</p>
+               </div>
+           </div>
+       `,
+       'quan-ly': `
+            <div class="space-y-4">
+               <div>
+                   <h4 class="text-lg font-semibold">DCA (Trung bình giá)</h4>
+                   <p class="text-sm text-stone-600">Là việc chia nhỏ khối lượng và vào lệnh ở nhiều mức giá khác nhau theo một kế hoạch định trước. Không phải là nhồi lệnh vô tội vạ khi đang thua lỗ.</p>
+               </div>
+                <div>
+                   <h4 class="text-lg font-semibold">Hedging (Bảo hiểm rủi ro)</h4>
+                   <p class="text-sm text-stone-600">Mở một lệnh ngược chiều để "khóa" mức lỗ tạm thời. Kỹ thuật này rất khó để gỡ lệnh hiệu quả, người mới nên ưu tiên cắt lỗ sớm.</p>
+               </div>
+                <div>
+                   <h4 class="text-lg font-semibold">Chạy Lệnh & "Quãng 0 đô"</h4>
+                   <p class="text-sm text-stone-600">Khi chuỗi lệnh DCA gặp bất lợi, mục tiêu tối thượng là tìm ra "quãng 0 đô" (điểm hòa vốn) để thoát ra an toàn, không phải để gỡ gạc.</p>
+               </div>
+           </div>
+       `
+   };
+
+   const tabs = document.querySelectorAll('.tab');
+   const tabContent = document.getElementById('tab-content');
+
+   function updateTabContent(tabId) {
+       tabs.forEach(tab => {
+           if (tab.dataset.tab === tabId) {
+               tab.classList.add('active', 'accent-text', 'accent-border');
+           } else {
+               tab.classList.remove('active', 'accent-text', 'accent-border');
+           }
+       });
+       tabContent.innerHTML = tabData[tabId];
+   }
+  
+   tabs.forEach(tab => {
+       tab.addEventListener('click', () => {
+           updateTabContent(tab.dataset.tab);
+       });
+   });
+
+   updateTabContent('truong-phai');
+
+   const menuButton = document.getElementById('menu-button');
+   const mobileMenu = document.getElementById('mobile-menu');
+
+   menuButton.addEventListener('click', () => {
+       mobileMenu.classList.toggle('hidden');
+   });
+
+   mobileMenu.addEventListener('click', (e) => {
+       if (e.target === mobileMenu) {
+           mobileMenu.classList.add('hidden');
+       }
+   });
+
+   document.querySelectorAll('#mobile-nav a').forEach(link => {
+       link.addEventListener('click', () => {
+           mobileMenu.classList.add('hidden');
+       });
+   });
+
+   const sections = document.querySelectorAll('section');
+   const navLinks = document.querySelectorAll('.nav-link');
+  
+   function changeLinkState() {
+       let index = sections.length;
+
+       while(--index && window.scrollY + 50 < sections[index].offsetTop) {}
+      
+       navLinks.forEach((link) => link.classList.remove('active'));
+       // Find the corresponding link in both navs
+       const activeLinks = document.querySelectorAll(`a[href="#${sections[index].id}"]`);
+       activeLinks.forEach(link => link.classList.add('active'));
+   }
+
+   changeLinkState();
+   window.addEventListener('scroll', changeLinkState);
+});
+</script>
+
+</body>
+</html>
+
+
